@@ -1,39 +1,47 @@
-// MarkAttendance.js
 import React, { useState } from 'react';
 import axios from 'axios';
 
 const MarkAttendance = () => {
     const [uniqueId, setUniqueId] = useState('');
-    const [status, setStatus] = useState('Present');
     const [message, setMessage] = useState('');
 
+    // Handle form submission
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const response = await axios.post('/api/attendance', { uniqueId, status });
-            setMessage(response.data.message);
+            // Send POST request to the backend with the uniqueId
+            const response = await axios.post('/api/attendance/mark-attendance', { uniqueId }, {
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem('authToken')}`  // Send token for verification
+                }
+            });
+
+            // Display success or failure message
+            if (response.data.success) {
+                setMessage('Attendance marked successfully');
+            } else {
+                setMessage('Failed to mark attendance');
+            }
         } catch (error) {
-            const errorMessage = error.response?.data?.message || error.message || 'Error marking attendance';
-            setMessage(errorMessage);
+            console.error('Error marking attendance:', error);
+            setMessage('Failed to mark attendance');
         }
     };
 
     return (
         <div>
-            <h1>Mark Attendance</h1>
+            <h2>Mark Attendance</h2>
             <form onSubmit={handleSubmit}>
-                <input
-                    type="text"
-                    placeholder="Enter Unique ID"
-                    value={uniqueId}
-                    onChange={(e) => setUniqueId(e.target.value)}
-                    required
-                />
-                <select value={status} onChange={(e) => setStatus(e.target.value)}>
-                    <option value="Present">Present</option>
-                    <option value="Absent">Absent</option>
-                </select>
-                <button type="submit">Submit</button>
+                <label>
+                    Unique ID:
+                    <input
+                        type="text"
+                        value={uniqueId}
+                        onChange={(e) => setUniqueId(e.target.value)}
+                        required
+                    />
+                </label>
+                <button type="submit">Mark Attendance</button>
             </form>
             {message && <p>{message}</p>}
         </div>

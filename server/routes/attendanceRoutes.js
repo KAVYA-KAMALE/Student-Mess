@@ -1,36 +1,43 @@
-// attendanceRoutes.js
 const express = require('express');
-const Attendance = require('./models/Attendance');
-
 const router = express.Router();
+const Student = require('../models/Student');  // Assuming you have a Student model
+const Attendance = require('../models/Attendance');  // Assuming you have an Attendance model
+const verifyToken = require('../middleware/verifyToken');  // Token verification middleware
 
-router.post('/', async (req, res) => {
-    const { uniqueId, status } = req.body;
+// Route to mark attendance
+router.post('/mark-attendance', verifyToken, async (req, res) => {
+    const { uniqueId } = req.body;
+
+    // Validate that uniqueId is provided
+    if (!uniqueId) {
+        return res.status(400).json({ success: false, message: 'Unique ID is required' });
+    }
 
     try {
-        // Check if attendance record exists
-        const existingAttendance = await Attendance.findOne({ uniqueId });
+        // Fetch student details from the Student collection
+        const student = await Student.findOne({ uniqueId });
 
-        if (existingAttendance) {
-            // Update existing attendance record
-            existingAttendance.status = status;
-            existingAttendance.timestamp = Date.now(); // Update timestamp
-            await existingAttendance.save();
-            return res.status(200).json({ message: 'Attendance updated successfully' });
+        // If student is not found, return an error
+        if (!student) {
+            return res.status(404).json({ success: false, message: 'Student not found' });
         }
 
-        // Create a new attendance record if it doesn't exist
+        // If the student is found, mark attendance in the Attendance collection
         const attendance = new Attendance({
-            uniqueId,
-            status
+            rollNo: student.rollNo,
+            name: student.name,
+            status: 'Present',  // You can make this dynamic if required
+            timestamp: new Date()
         });
 
+        // Save the attendance record to the database
         await attendance.save();
 
-        res.status(201).json({ message: 'Attendance marked successfully' });
+        // Send success response
+        return res.status(200).json({ success: true, message: 'Attendance marked successfully' });
     } catch (error) {
-        console.error('Error while marking attendance:', error);
-        res.status(500).json({ message: error.message || 'An error occurred' });
+        console.error('Error marking attendance:', error);
+        return res.status(500).json({ success: false, message: 'Server error' });
     }
 });
 
